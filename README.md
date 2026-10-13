@@ -71,6 +71,105 @@ https://oshwhub.com/chaeng/project_jofcnupz
 
 ---
 
+## 🔧 编译与烧录
+
+本项目使用 ESP-IDF 5.5.5，目标芯片为 ESP32-S3。Windows 用户请在 ESP-IDF 终端中，从仓库根目录执行：
+
+```bat
+python rg_tool.py --target=t320-s3 build-img
+```
+
+编译完成后会生成 `retro-go_chaeng_t320-s3.img`。连接设备并确认串口号后烧录：
+
+```bat
+python rg_tool.py --target=t320-s3 --port=COM3 install
+```
+
+将 `COM3` 替换为实际串口号。需要干净重编译时使用：
+
+```bat
+python rg_tool.py --target=t320-s3 release
+```
+
+详细说明见 [BUILDING.md](BUILDING.md) 和 [t320-s3 目标说明](components/retro-go/targets/t320-s3/docs/README.md)。
+
+---
+
+## 🧩 功能模块与代码位置
+
+本项目采用“共享运行时组件 + 多个独立 ESP-IDF 应用”的结构。各应用分别编译为 ESP32 应用分区，由启动器负责选择和切换。
+
+| 功能 | 代码位置 | 主要入口 |
+|---|---|---|
+| 系统初始化、应用切换、启动参数 | `components/retro-go` | `rg_system.c` |
+| 显示、绘图、Surface | `components/retro-go` | `rg_display.c`、`rg_surface.c` |
+| 按键和电池检测 | `components/retro-go` | `rg_input.c` |
+| 音频 | `components/retro-go/drivers/audio` | `rg_audio.c`、音频驱动文件 |
+| GUI、菜单、对话框 | `components/retro-go` | `rg_gui.c` |
+| 存储、存档、设置 | `components/retro-go` | `rg_storage.c`、`rg_settings.c` |
+| 启动器、ROM 浏览、应用注册 | `launcher/main` | `main.c`、`applications.c`、`browser.c` |
+| NES、SNES、GB、GBC、PCE、SMS、G&W、Lynx | `retro-core` | `retro-core/main/main.c` |
+| DOOM | `prboom-go` | `prboom-go/main/main.c` |
+| Mega Drive | `gwenesis` | `gwenesis/main/main.c` |
+| MSX | `fmsx` | `fmsx/main/main.c` |
+| TXT 电子书 | `txt-reader` | `txt-reader/main/main.c` |
+| 主题、图片和字体 | `themes`、`components/retro-go/fonts`、`tools` | `gen_images.py`、字体生成脚本 |
+| 翻译 | `components/retro-go` | `translations.h`、`rg_localization.c` |
+
+### 应用切换流程
+
+启动器在 `launcher/main/applications.c` 中注册 ROM 类型和目标应用：
+
+- `nes`、`snes`、`gb`、`gbc`、`pce`、`sms` 等进入 `retro-core`
+- `md` 进入 `gwenesis`
+- `doom` 进入 `prboom-go`
+- `msx` 进入 `fmsx`
+- `txt` 进入 `txt-reader`
+
+用户选择 ROM 后，启动器调用 `rg_system_switch_app()` 保存目标分区、系统名称和 ROM 路径，然后重启设备。目标应用启动后读取这些参数，再进入对应的模拟器主函数。因此，应用之间是通过 ESP32 应用分区和重启机制连接的，而不是普通的函数调用。
+
+### t320-s3 硬件配置
+
+当前硬件目标的配置集中在 `components/retro-go/targets/t320-s3/`：
+
+- `config.h`：屏幕、GPIO、按键、音频和目标功能配置
+- `env.py`：芯片类型、镜像格式和项目名称
+- `sdkconfig`：ESP-IDF 和 ESP32-S3 编译配置
+- `docs/README.md`：硬件引脚和使用说明
+
+其中包括 ST7789 屏幕、320×240 分辨率、SD 卡、I2S 音频、电池 ADC、WS2812 状态灯以及全部按键 GPIO 配置。
+
+### 硬件驱动位置
+
+| 硬件功能 | 实现文件 |
+|---|---|
+| 板级 GPIO、屏幕、按键、音频和电池配置 | `components/retro-go/targets/t320-s3/config.h` |
+| 芯片型号、镜像名称和目标参数 | `components/retro-go/targets/t320-s3/env.py` |
+| ESP32-S3、Flash、PSRAM 和烧录配置 | `components/retro-go/targets/t320-s3/sdkconfig` |
+| 屏幕底层驱动 | `components/retro-go/drivers/display/ili9341.h` |
+| 屏幕刷新、旋转、缩放和背光管理 | `components/retro-go/rg_display.c` |
+| SD 卡和文件系统 | `components/retro-go/rg_storage.c` |
+| GPIO 按键和 ADC 电池检测 | `components/retro-go/rg_input.c` |
+| I2S 音频底层驱动 | `components/retro-go/drivers/audio/i2s.c` |
+| 音频设备选择、音量和滤波 | `components/retro-go/rg_audio.c` |
+| WS2812 RGB 灯 | `components/retro-go/drivers/led/ws2812.c` |
+| 系统初始化、SPI 总线和硬件切换 | `components/retro-go/rg_system.c` |
+
+修改硬件时，通常先修改 `targets/t320-s3/config.h` 中的 GPIO 和功能宏；只有通信协议或驱动行为改变时，才需要继续修改 `drivers` 或对应的 `rg_*.c` 文件。应用目录一般通过这些公共接口使用硬件，不直接操作 GPIO。
+
+当前配置中的麦克风 GPIO1、2、21 标记为未被 Retro-Go 使用。
+
+### 当前项目限制记录
+
+以下内容是当前项目结构中的已知现状，暂不作为问题修复：
+
+- `rg_tool.py` 默认目标仍是 `odroid-go`，编译本项目时应显式使用 `--target=t320-s3`。
+- 各应用的分区大小在 `rg_tool.py` 中固定定义，增大应用或字体时需要关注空间是否足够。
+- 构建脚本会生成临时的 `partitions.csv`，它不是当前镜像的实际应用分区布局文件。
+- 启动器通过检测应用分区是否存在来决定是否显示对应项目，因此代码中注册的系统数量可能多于当前实际构建的应用数量。
+- GPIO0 同时承担启动/恢复相关功能和按键功能，具体行为依赖硬件设计和启动时序。
+- 网络更新相关配置包含跳过 TLS 证书验证的选项，使用不可信网络时需要注意风险。
+
 ## 🔌 GPIO 引脚定义
 
 SD_CMD - GPIO11  
@@ -122,6 +221,7 @@ ESP32-S3 主控
 ├── 按键输入系统  
 └── 电池供电系统  
 
+
 ---
 
 ### 软件架构
@@ -129,7 +229,9 @@ ESP32-S3 主控
 retro-go base  
 ↓  
 retro-go_chaeng port  
-├── driver（驱动层）  
+├── driver（驱动层）  ESP-IDF 5.5.5
+ESP32-S3
+launcher
 ├── ui（界面系统）  
 ├── input（输入系统）  
 ├── audio（音频系统）  

@@ -1,13 +1,13 @@
-# Theming Retro-Go
+# 为 Retro-Go 设置主题
 
-This document should document what are themes, how they're structured, and how to make them.
+本文档旨在说明什么是主题、它们如何构成，以及如何制作主题。
 
-Example themes can be found in the [themes](/themes/) folder of this project.
+示例主题可以在本项目的 [themes](/themes/) 文件夹中找到。
 
 
-## Theme Structure
+## 主题结构
 
-A theme is a folder placed in `sd:/retro-go/themes` containing the following files:
+主题是放置在 `sd:/retro-go/themes` 中的一个文件夹，包含以下文件：
 
 ````
 /retro-go/themes
@@ -20,26 +20,26 @@ A theme is a folder placed in `sd:/retro-go/themes` containing the following fil
     └── theme.json
 ````
 
-| Name | Format | Description | Required |
+| 名称 | 格式 | 描述 | 是否必需 |
 |--|--|--|--|
-| `theme.json` | JSON | Contains the theme metadata (description, author, colors, etc) | Yes |
-| `preview.png` | PNG 160x120 | Theme preview to be displayed in the theme selector | No |
-| `background.png` | PNG 320x240 | Launcher's default background | No |
-| `background_<tab_name>.png` | PNG 320x240 | Launcher's per-tab backgrounds | No |
-| `banner_<tab_name>.png` | PNG 272x24 | Launcher's per-tab banners | No |
-| `logo_<tab_name>.png` | PNG 46x50 | Launcher's per-tab logos | No |
+| `theme.json` | JSON | 包含主题元数据（描述、作者、颜色等） | 是 |
+| `preview.png` | PNG 160x120 | 在主题选择器中显示的主题预览 | 否 |
+| `background.png` | PNG 320x240 | 启动器的默认背景 | 否 |
+| `background_<tab_name>.png` | PNG 320x240 | 启动器的各标签页背景 | 否 |
+| `banner_<tab_name>.png` | PNG 272x24 | 启动器的各标签页横幅 | 否 |
+| `logo_<tab_name>.png` | PNG 46x50 | 启动器的各标签页标志 | 否 |
 
 
 ### theme.json
 
-The `theme.json` file contains the colors used by the theme, as well as some author meta data.
+`theme.json` 文件包含主题所使用的颜色，以及一些作者元数据。
 
-All fields are optional but it is not recommended to omit individual values because the fallback value that will be used is subject to change between retro-go versions. You are free to omit entire sections, however. For example if you only wish to retheme the launcher but not the dialogs, or vice-versa.
+所有字段都是可选的，但不建议省略单个值，因为所使用的回退值可能会在 retro-go 的不同版本之间发生变化。不过，你可以自由地省略整个部分。例如，如果你只想重新设置启动器的主题而不想改变对话框，或者反过来，都可以。
 
-Colors are RGB565 and can be represented as integers or hex strings. The special value `transparent` is also accepted in some places.
+颜色为 RGB565 格式，可以表示为整数或十六进制字符串。在某些地方也接受特殊值 `transparent`（透明）。
 
 <details>
-  <summary>View example theme.json</summary>
+  <summary>查看 theme.json 示例</summary>
 
 ````json
 {
@@ -99,8 +99,8 @@ Colors are RGB565 and can be represented as integers or hex strings. The special
 </details>
 
 
-### Images
+### 图像
 
-It is highly recommended to keep the image files sizes as small as possible to ensure good loading speed. This can be achieved by using the lowest bit depth possible when saving your PNG file. Tools like [pngquant](https://pngquant.org/) can also help!
+强烈建议尽可能保持图像文件尺寸较小，以确保良好的加载速度。这可以通过在保存 PNG 文件时使用尽可能低的位深度来实现。像 [pngquant](https://pngquant.org/) 这样的工具也可以提供帮助！
 
-Magenta (rgb(255, 0, 255) / 0xF81F) is used as the transparency color in some situations.
+在某些情况下，洋红色（rgb(255, 0, 255) / 0xF81F）被用作透明色。

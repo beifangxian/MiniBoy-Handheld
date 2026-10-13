@@ -51,18 +51,18 @@ typedef enum
 
 typedef enum
 {   // bits 0-3: Mode
-    RG_BOOT_NORMAL    = 0x00,
-    RG_BOOT_RESUME    = 0x01,
-    RG_BOOT_ONCE      = 0x02,
-    RG_BOOT_RESET     = 0x04,
-    RG_BOOT_NETPLAY   = 0x08,
-    RG_BOOT_MODE_MASK = 0x0F,
+    RG_BOOT_NORMAL    = 0x00,                           //正常启动
+    RG_BOOT_RESUME    = 0x01,                           //从存档/上次状态恢复
+    RG_BOOT_ONCE      = 0x02,                           //一次性启动
+    RG_BOOT_RESET     = 0x04,                           //启动前先重置
+    RG_BOOT_NETPLAY   = 0x08,                           //联网对战模式
+    RG_BOOT_MODE_MASK = 0x0F,                           //掩码，用于提取 bits 0-3 的模式值
     // bits 4-7: slot
-    RG_BOOT_SLOT0     = 0x00,
-    RG_BOOT_SLOT1     = 0x10,
-    RG_BOOT_SLOT2     = 0x20,
-    RG_BOOT_SLOT3     = 0x30,
-    RG_BOOT_SLOT_MASK = 0xF0,
+    RG_BOOT_SLOT0     = 0x00,                           //使用存档槽0(默认)
+    RG_BOOT_SLOT1     = 0x10,                           //使用存档槽1
+    RG_BOOT_SLOT2     = 0x20,                           //使用存档槽2
+    RG_BOOT_SLOT3     = 0x30,                           //使用存档槽3
+    RG_BOOT_SLOT_MASK = 0xF0,                           //掩码，用于提取 bits 4-7 的槽位号
     // bits 8-31: unused...
 } rg_boot_flags_t;
 
@@ -161,32 +161,39 @@ typedef struct
 
 typedef struct
 {
-    const char *name;
-    const char *version;
-    const char *buildDate;
-    const char *buildInfo;
-    const char *configNs;
-    const char *bootArgs;
-    uint32_t bootFlags;
-    uint32_t indicatorsMask;
-    float speed;
-    int sampleRate;
-    int tickRate;
-    int frameTime;
-    int frameskip;
-    int overclock;
-    int tickTimeout;
-    bool lowMemoryMode;
-    bool enWatchdog;
-    bool isColdBoot;
-    bool isLauncher;
-    // bool isOfficial;
-    bool isRelease;
-    int logLevel;
-    int saveSlot;
-    const char *romPath;
-    rg_handlers_t handlers;
-    bool initialized;
+    // ===== 基本信息 =====
+    const char *name;                   // 应用/核心名称（如 "RetroGo"）
+    const char *version;                // 版本号字符串（如 "1.2.3"）
+    const char *buildDate;              // 编译日期（如 __DATE__）
+    const char *buildInfo;              // 额外编译信息（编译器、构建类型等）
+    const char *configNs;               // 配置命名空间（用于隔离不同核心的配置项，如 "nes"）
+    // ===== 启动参数 =====
+    const char *bootArgs;               // 启动命令行参数（传给被模拟程序的参数）
+    uint32_t bootFlags;                 // 启动标志位（对应 rg_boot_flags_t：模式 + 存档槽）
+     // ===== 运行/性能参数 =====
+    uint32_t indicatorsMask;            // 状态指示器（OSD/指示灯）显示掩码，控制显示哪些提示
+    float speed;                        // 运行速度倍率（1.0 = 原速，2.0 = 两倍速）
+    int sampleRate;                     // 音频采样率（Hz，如 44100）
+    int tickRate;                       // 每秒逻辑 tick 数（模拟器主频/时序基准）
+    int frameTime;                      // 每帧时间（毫秒或微秒，视实现而定）
+    int frameskip;                      // 跳帧数（0 = 不跳帧）
+    int overclock;                      // CPU 超频等级（0 = 默认，>0 = 加速）
+    int tickTimeout;                    // tick 超时阈值（防止卡死，单位视实现）
+     // ===== 运行模式开关 =====
+    bool lowMemoryMode;                 // 低内存模式（裁剪缓存，适配小内存设备）
+    bool enWatchdog;                    // 是否启用看门狗（死循环/卡死自动复位）
+    bool isColdBoot;                    // 是否冷启动（true = 全新启动，false = 热启动/恢复）
+    bool isLauncher;                    // 是否以"启动器/前端"身份运行（而非直接跑游戏）
+    // bool isOfficial;                 // 【已注释】是否为官方构建（可能因去品牌化或未使用而移除）
+    bool isRelease;                     // 是否为正式发布版（false = 调试/测试版）
+    // ===== 日志与存档 =====
+    int logLevel;                       // 日志等级（如 0=off,1=error,2=warn,3=info,4=debug）
+    int saveSlot;                       // 当前使用的存档槽号（0~3）
+    // ===== 资源与回调 =====
+    const char *romPath;                // 当前加载的 ROM 路径
+    rg_handlers_t handlers;             // 平台/宿主提供的回调函数集合（绘图、音频、输入、文件等）
+    // ===== 状态标记 =====
+    bool initialized;                   // 是否已完成初始化（防止重复 init）
 } rg_app_t;
 
 typedef struct

@@ -31,13 +31,14 @@
 #define RG_LOGBUF_SIZE 2048
 typedef struct
 {
-    uint32_t magicWord;
-    char message[256];
-    char context[128];
-    char configNs[16];
-    char console[RG_LOGBUF_SIZE];
-    size_t cursor;
-    rg_stats_t statistics;
+    uint32_t magicWord;                 // 魔数标记，用于校验这块内存是否确实是有效的 panic 记录
+                                        // （例如固定值 0xDEADBEEF / 0x50414E43 "PANC"）
+    char message[256];                  // 崩溃信息/摘要（如错误描述、断言失败原因），定长 256 字节
+    char context[128];                  // 崩溃上下文（如出错函数名、模块名、位置标签），定长 128 字节
+    char configNs[16];                  // 配置命名空间（如 "nes"、"gb"），用于标识出问题的核心，定长 16 字节
+    char console[RG_LOGBUF_SIZE];       // 控制台/日志缓冲区快照，保存崩溃前最后一段日志（大小由宏决定）
+    size_t cursor;                      // 日志写入位置游标（配合 console 环形缓冲区使用，指示有效数据末尾）
+    rg_stats_t statistics;              // 崩溃时刻的运行时统计快照（帧数、内存、FPS、耗时等）
 } panic_trace_t;
 
 typedef struct
@@ -106,7 +107,7 @@ static const char *SETTING_INDICATOR_MASK = "Indicators";
 #define logbuf_putc(buf, c) (buf)->console[(buf)->cursor++] = c, (buf)->cursor %= RG_LOGBUF_SIZE;
 #define logbuf_puts(buf, str) for (const char *ptr = str; *ptr; ptr++) logbuf_putc(buf, *ptr);
 
-
+/*程序崩溃/断言失败/致命错误的那一刻调用它，作用是保存现场*/
 static inline void begin_panic_trace(const char *context, const char *message)
 {
     panicTrace.magicWord = RG_STRUCT_MAGIC;
@@ -407,11 +408,13 @@ rg_app_t *rg_system_reinit(int sampleRate, const rg_handlers_t *handlers, void *
     return &app;
 }
 
+/*总初始化函数*/
 rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_unused)
 {
+    //防反复初始化＋局部状态
     RG_ASSERT(app.initialized == false, "rg_system_init() was already called.");
-    bool enterRecoveryMode = false;
-    bool showCrashDialog = false;
+    bool enterRecoveryMode = false;                                                 //  进入回复模式
+    bool showCrashDialog = false;                                                   // 是否弹出崩溃对话框，默认不弹
 
     app = (rg_app_t){
         .name = RG_PROJECT_APP,
@@ -443,6 +446,7 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
     };
 
     // Do this very early, may be needed to enable serial console
+    //平台初始化+重启检查原因
     platform_init();
 
 #if defined(ESP_PLATFORM)
@@ -464,11 +468,12 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
     rg_i2c_init();
     rg_i2c_gpio_init();
 #endif
-
-    rg_storage_init();
-    rg_input_init();
+    /*初始化核心子系统 */
+    rg_storage_init();//存储
+    rg_input_init();//输入
 
     // Test for recovery request as early as possible
+    //尽早期检测"恢复模式按键"
     for (int timeout = 5, btn; (btn = rg_input_read_gamepad() & RG_RECOVERY_BTN) && timeout >= 0; --timeout)
     {
         RG_LOGW("Button " PRINTF_BINARY_16 " being held down...\n", PRINTF_BINVAL_16(btn));
@@ -476,43 +481,55 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
         rg_task_delay(100);
     }
 
+    //设置初始化 + 读取启动配置
     rg_settings_init(enterRecoveryMode || showCrashDialog);
     app.configNs = rg_settings_get_string(NS_BOOT, SETTING_BOOT_NAME, app.configNs);
     app.bootArgs = rg_settings_get_string(NS_BOOT, SETTING_BOOT_ARGS, app.bootArgs);
     app.bootFlags = rg_settings_get_number(NS_BOOT, SETTING_BOOT_FLAGS, app.bootFlags);
+    //显示 + GUI 初始化
     rg_display_init();
     rg_gui_init();
 
+    //三种启动结局（关键分支）
+    /*
+        ① 恢复模式：走 enter_recovery_mode()；
+        ② 崩溃弹窗：读取你前面看的 panic_trace_t，把崩溃信息存到 crash.log，弹框提示用户，然后退出；
+        ③ 正常：两个都不成立，继续往下走。
+    */
     if (enterRecoveryMode)
     {
-        enter_recovery_mode();
+        enter_recovery_mode();// ① 进恢复模式
     }
     else if (showCrashDialog)
     {
         RG_LOGE("Recoverying from panic!\n");
         char message[400] = "Application crashed";
-        if (panicTrace.magicWord == RG_STRUCT_MAGIC)
+        if (panicTrace.magicWord == RG_STRUCT_MAGIC)// 有有效崩溃记录
         {
             RG_LOGI("Panic log found, saving to sdcard...\n");
             if (panicTrace.message[0] && strcmp(panicTrace.message, "(none)") != 0)
-                strcpy(message, panicTrace.message);
+                strcpy(message, panicTrace.message);// 用记录里的真实信息
             if (rg_system_save_trace(RG_STORAGE_ROOT "/crash.log", 1))
-                strcat(message, "\nLog saved to SD Card.");
+                strcat(message, "\nLog saved to SD Card.");// 存崩溃日志到 SD
         }
         rg_display_clear(C_BLUE);
-        rg_gui_alert("System Panic!", message);
-        rg_system_exit();
+        rg_gui_alert("System Panic!", message);// 弹框告知
+        rg_system_exit();// 退出
     }
+    //清空崩溃记录
     memset(&panicTrace, 0, sizeof(panicTrace));
     panicTraceCleared = true;
 
+    //内存统计 + 低内存判定
     update_memory_statistics();
     app.lowMemoryMode = statistics.totalMemoryExt == 0;
 
+    //读回更多配置 + 计算 saveSlot
     app.indicatorsMask = rg_settings_get_number(NS_GLOBAL, SETTING_INDICATOR_MASK, app.indicatorsMask);
     app.saveSlot = (app.bootFlags & RG_BOOT_SLOT_MASK) >> 4;
     app.romPath = app.bootArgs ?: ""; // For whatever reason some of our code isn't NULL-aware, sigh..
 
+    //GUI 沙漏 + 音频 + 时区/时间
     rg_gui_draw_hourglass();
     rg_audio_init(sampleRate);
 
@@ -521,10 +538,11 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
 
     // Do these last to not interfere with panic handling above
     if (handlers)
-        app.handlers = *handlers;
+        app.handlers = *handlers;// 平台回调最后装，避免干扰上面的崩溃处理
 
 #ifdef RG_ENABLE_PROFILING
     RG_LOGI("Profiling has been enabled at compile time!\n");
+    // 性能分析
     profile = rg_alloc(sizeof(*profile), MEM_SLOW);
     profile->lock = rg_mutex_create();
 #endif
@@ -533,10 +551,11 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
         rg_gui_alert("External memory not detected", "Boot will continue but it will surely crash...");
 
     if (app.bootFlags & RG_BOOT_ONCE)
-        update_boot_config(RG_APP_LAUNCHER, NULL, NULL, 0);
+        update_boot_config(RG_APP_LAUNCHER, NULL, NULL, 0);// 一次性启动：启动后复位启动配置
 
-    rg_task_create("rg_sysmon", &system_monitor_task, NULL, 3 * 1024, RG_TASK_PRIORITY_5, -1);
-    app.initialized = true;
+    rg_task_create("rg_sysmon", &system_monitor_task, NULL, 3 * 1024, RG_TASK_PRIORITY_5, -1);// 系统监控任务
+    app.initialized = true;// 标记已初始化
+
 
     update_memory_statistics();
     RG_LOGI("Available memory: %d/%d + %d/%d", statistics.freeMemoryInt / 1024, statistics.totalMemoryInt / 1024,

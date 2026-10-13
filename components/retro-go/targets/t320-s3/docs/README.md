@@ -31,9 +31,17 @@ Firmware image: **`retro-go_chaeng_t320-s3.img`**
 
 ## Build
 
-```bash
-./rg_tool.py --target=t320-s3 build-img
-./rg_tool.py --target=t320-s3 --port=COMx install
+The repository currently uses ESP-IDF 5.5.5. On Windows, open an ESP-IDF 5.5.5 terminal first, then run these commands from the repository root:
+
+```bat
+python rg_tool.py --target=t320-s3 build-img
+python rg_tool.py --target=t320-s3 --port=COM3 install
+```
+
+Replace `COM3` with the actual device port. The build generates `retro-go_chaeng_t320-s3.img`. For a clean build:
+
+```bat
+python rg_tool.py --target=t320-s3 release
 ```
 
 Display tuning: change `RG_SCREEN_ROTATION` (0–7) and `RG_SCREEN_RGB_BGR` (0/1) in `config.h`. Current: rotation `5` → MADCTL `0xA0` (MY|MV|BGR).

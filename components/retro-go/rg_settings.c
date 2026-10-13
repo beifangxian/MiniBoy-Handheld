@@ -79,6 +79,7 @@ static void update_value(const char *section, const char *key, cJSON *new_value)
         cJSON_Delete(new_value);
 }
 
+/*设置（配置）子系统的初始化函数*/
 void rg_settings_init(bool _safe_mode)
 {
     config_root = cJSON_CreateObject();

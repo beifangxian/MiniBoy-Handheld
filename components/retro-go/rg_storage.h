@@ -16,13 +16,14 @@
 #define RG_BASE_PATH_THEMES RG_BASE_PATH "/themes"
 #define RG_BASE_PATH_BORDERS RG_BASE_PATH "/borders"
 
+//目录扫描结构体
 typedef struct
 {
-    char path[RG_PATH_MAX + 1];
-    const char *basename;
-    const char *dirname;
-    size_t size;
-    time_t mtime;
+    char path[RG_PATH_MAX + 1];//完整路径
+    const char *basename;//文件名字
+    const char *dirname;//目录部分
+    size_t size;//大小
+    time_t mtime;//修改时间
     bool is_file;
     bool is_dir;
 } rg_scandir_t;
@@ -42,16 +43,17 @@ enum
     RG_SCANDIR_STOP = 0,
 };
 
+//单个路径（文件/目录）状态的结构体
 typedef struct
 {
-    const char *basename;
-    const char *extension;
-    size_t size;
-    time_t mtime;
-    bool is_dir;
-    bool is_file;
-    bool is_link;
-    bool exists;
+    const char *basename;//文件名部分
+    const char *extension;//扩展名
+    size_t size;//大小
+    time_t mtime;//最后修改时间
+    bool is_dir;//是目录
+    bool is_file;//是普通文件
+    bool is_link;//是符号链接
+    bool exists;//路径是否存在
 } rg_stat_t;
 
 void rg_storage_init(void);

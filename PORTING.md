@@ -1,59 +1,60 @@
-# Table of contents
-- [Prerequisites](#prerequisites)
-- [Targets](#targets)
-- [Porting](#porting)
-- [Patching](#patching)
+# 目录
+
+- [前提条件](#prerequisites)
+- [目标](#targets)
+- [移植](#porting)
+- [打补丁](#patching)
 
 
-# Introduction
+# 简介
 
-This document describes the process of adding support for a new ESP32 device (what retro-go calls a *target*).
-
-
-# Prerequisites
-
-## Hardware prerequisites
-Retro-Go will run on any device that use an esp32 chip (including variants like s2, s3, p4), as long as it has PSRAM (also called SPIRAM or external RAM). You will also need a serial cable (most esp32 devices expose the serial interface over USB).
+本文档描述了为新的 ESP32 设备添加支持的过程（retro-go 将其称为*目标*）。
 
 
-## Software prerequisites
-You will need a working installation of esp-idf. Retro-Go supports many versions, refer to [BUILDING.md](BUILDING.md) for more information. If you are new to esp-idf/esp32 development, you might want to try flashing a few sample programs to your device to make sure that everything works, before attempting a complicated project like retro-go.
+# 前提条件
+
+## 硬件前提条件
+Retro-Go 可以运行在任何使用 esp32 芯片（包括 s2、s3、p4 等变体）的设备上，只要该设备具有 PSRAM（也称为 SPIRAM 或外部 RAM）。你还需要一根串口线（大多数 esp32 设备通过 USB 暴露串口接口）。
 
 
-# Targets
-A target in retro-go is a set of files that describes a hardware device (drivers to use, GPIOs, button mapping, etc). Targets are folders located in `components/retro-go/targets/` and usually contain the following files:
+## 软件前提条件
+你需要一个可正常工作的 esp-idf 安装。Retro-Go 支持许多版本，更多信息请参考 [BUILDING.md](BUILDING.md)。如果你是 esp-idf/esp32 开发的新手，在尝试像 retro-go 这样复杂的项目之前，你可能想先向你的设备烧录几个示例程序，以确保一切正常。
 
-| Name          | Description |
+
+# 目标
+retro-go 中的目标是一组描述硬件设备的文件（要使用的驱动、GPIO、按键映射等）。目标是以文件夹形式存放在 `components/retro-go/targets/` 中，通常包含以下文件：
+
+| 名称          | 描述 |
 |---------------|-------------|
-| config.h      | This is the retro-go configuration file, it describes your hardware to retro-go |
-| env.py        | This is imported by rg_tool.py, it is used to set environment variables required by tooling, such as the esp32 chip type or baudrates or binary formats |
-| sdkconfig     | This is the esp-idf configuration file for your board/device |
+| config.h      | 这是 retro-go 配置文件，它向 retro-go 描述你的硬件 |
+| env.py        | 这个文件由 rg_tool.py 导入，用于设置工具所需的环境变量，例如 esp32 芯片类型、波特率或二进制格式 |
+| sdkconfig     | 这是你的板子/设备的 esp-idf 配置文件 |
 
 
-# Porting
-Retro-Go uses reusable hardware components, so it is easy to set it up for your own hardware.
+# 移植
+Retro-Go 使用可复用的硬件组件，因此很容易为你的硬件进行设置。
 
-To get started, locate a target that is the most similar to your device and use it as a starting point. Clone the target's folder and give it a new name, then add your new target to `components/retro-go/config.h`.
+首先，找到一个与你的设备最相似的目标，并将其作为起点。克隆该目标的文件夹并给它起一个新名字，然后将你的新目标添加到 `components/retro-go/config.h` 中。
 
 
-## Target files
+## 目标文件
 
 ### config.h
 
-This file contains the bulk of your configurations. There is currently no exhaustive documentation of all the options you can define in this file, but you can refer to odroid-go's config.h that contains most of them.
+此文件包含你的大部分配置。目前没有关于此文件中可定义的所有选项的详尽文档，但你可以参考 odroid-go 的 config.h，其中包含了大部分选项。
 
-Don't forget to change `RG_TARGET_NAME` to match the name of your target folder.
+不要忘记将 `RG_TARGET_NAME` 改为与你的目标文件夹名称一致。
 
-#### Display
+#### 显示
 
-Retro-Go has a single output driver: ILI9341/ST7789. Thankfully most screens out there use this controller!
+Retro-Go 只有一个输出驱动：ILI9341/ST7789。幸运的是，大多数屏幕都使用这个控制器！
 
-You will need to define the correct pinout (RG_GPIO_LCD_*) and the corrent init sequence (RG_SCREEN_INIT). To find the required sequence of commands you can refer to other example code meant for your display/device.
+你需要定义正确的引脚排列（RG_GPIO_LCD_*）和正确的初始化序列（RG_SCREEN_INIT）。要找到你显示器/设备所需的命令序列，可以参考为你的显示器/设备编写的其他示例代码。
 
 
-If you aren't using the ILI9341/ST7789 screen driver, you will need to write your own.
+如果你没有使用 ILI9341/ST7789 屏幕驱动，你需要编写自己的驱动。
 
-You can clone `components/retro-go/drivers/ili9341.h` to use as a starting point. Don't forget to add it to the top of `rg_display.c`:
+你可以克隆 `components/retro-go/drivers/ili9341.h` 作为起点。不要忘记将它添加到 `rg_display.c` 的顶部：
 
 ```c
 #if RG_SCREEN_DRIVER == 0 /* ILI9341/ST7789 */
@@ -67,62 +68,62 @@ You can clone `components/retro-go/drivers/ili9341.h` to use as a starting point
 #endif
 ```
 
-#### Input
+#### 输入
 
-Retro-Go has five input drivers:
-- GPIO: This is a button connected to a pin of the esp32
-- ADC:  This is usually used with a voltage divider to put multiple buttons on a single esp32 pin
-- I2C:  Also known as a GPIO extender, retro-go supports many chips (AW9523, PCF9539, MCP23017, PCF8575)
-- Shift register: Like a SNES controller or a 74HC165
-- Virtual: If your device doesn't have enough button, you can map combos to the missing keys. eg start+select = menu
+Retro-Go 有五种输入驱动：
+- GPIO：这是连接到 esp32 某个引脚的按键
+- ADC：通常与分压器一起使用，将多个按键连接到单个 esp32 引脚
+- I2C：也称为 GPIO 扩展器，retro-go 支持许多芯片（AW9523、PCF9539、MCP23017、PCF8575）
+- 移位寄存器：类似于 SNES 手柄或 74HC165
+- 虚拟：如果你的设备按键不够，你可以将组合键映射到缺失的按键。例如 start+select = menu
 
-You can combine any of them by defining the appropriate `RG_GAMEPAD_*_MAP` in your `config.h`. Refer to `rg_input.h` or other targets to see how configuration is done.
+你可以通过在 `config.h` 中定义适当的 `RG_GAMEPAD_*_MAP` 来组合使用它们中的任何一种。参考 `rg_input.h` 或其他目标以了解如何进行配置。
 
 
 ### sdkconfig
 
-This file is used by ESP-IDF to build the code for the ESP32 itself.
+此文件由 ESP-IDF 用于为 ESP32 本身构建代码。
 
-Retro-Go, for the most part, doesn't care about the sdkconfig and its content will depend entirely the chip/board used. But there are things that you should keep in mind:
-- The main task stack size has to be at least 8KB for retro-go ([CONFIG_ESP_MAIN_TASK_STACK_SIZE](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfig-reference.html#config-esp-main-task-stack-size))
-- The CPU frequency should be set to the maximum possible and power management be disabled ([CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-esp-default-cpu-freq-mhz), [CONFIG_PM_ENABLE](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-pm-enable))
-- SPIRAM should be enabled and configured correctly for your device ([CONFIG_SPIRAM_\*](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#esp-psram))
-- Flash and SPIRAM speed should be set to the maximum supported by your device ([CONFIG_ESPTOOLPY_FLASHFREQ](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-esptoolpy-flashfreq), [CONFIG_SPIRAM_SPEED](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-spiram-speed))
-- Long filenames support should be enabled in FATFS ([CONFIG_FATFS_LFN_HEAP](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-fatfs-long-filenames))
-- UTF-8 support should be enabled in FATFS ([CONFIG_FATFS_API_ENCODING_UTF_8](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-fatfs-api-encoding))
+Retro-Go 在大多数情况下不关心 sdkconfig，其内容完全取决于所使用的芯片/板子。但有一些事情你需要记住：
+- 主任务堆栈大小必须至少为 8KB，以满足 retro-go 的需求（[CONFIG_ESP_MAIN_TASK_STACK_SIZE](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfig-reference.html#config-esp-main-task-stack-size)）
+- CPU 频率应设置为最大可能值，并且应禁用电源管理（[CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-esp-default-cpu-freq-mhz)、[CONFIG_PM_ENABLE](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-pm-enable)）
+- 应启用 SPIRAM 并针对你的设备正确配置（[CONFIG_SPIRAM_\*](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#esp-psram)）
+- Flash 和 SPIRAM 速度应设置为你的设备支持的最大值（[CONFIG_ESPTOOLPY_FLASHFREQ](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-esptoolpy-flashfreq)、[CONFIG_SPIRAM_SPEED](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-spiram-speed)）
+- 应在 FATFS 中启用长文件名支持（[CONFIG_FATFS_LFN_HEAP](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-fatfs-long-filenames)）
+- 应在 FATFS 中启用 UTF-8 支持（[CONFIG_FATFS_API_ENCODING_UTF_8](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig-reference.html#config-fatfs-api-encoding)）
 
-ESP-IDF provides a tool to edit it, namely `idf.py menuconfig`, but to use it in retro-go you must follow the following steps:
+ESP-IDF 提供了一个编辑它的工具，即 `idf.py menuconfig`，但要在 retro-go 中使用它，你必须遵循以下步骤：
 
-1. Build the launcher for your target (this will make sure you have the correct ESP32 board selected and generate a default sdkconfig)
+1. 为你的目标构建启动器（这将确保你选择了正确的 ESP32 板子并生成默认的 sdkconfig）
     - `./rg_tool.py clean`
     - `./rg_tool.py --target=my-target build launcher`
-2. Enter the launcher directory: `cd launcher`
-3. Run `idf.py menuconfig` and make the changes that you need. Make sure to save the changes and exit.
-4. Optionally test the app with the new config (but do NOT run `rg_tool.py clean` at this point, your new config will be deleted)
+2. 进入启动器目录：`cd launcher`
+3. 运行 `idf.py menuconfig` 并进行你需要的更改。确保保存更改并退出。
+4. 可选地使用新配置测试应用（但此时不要运行 `rg_tool.py clean`，否则你的新配置将被删除）
     - `cd ..`
     - `./rg_tool.py --target=my-target run launcher`
-5. When you're satisfied, copy the `sdkconfig` file from the launcher to the target folder, so that it's used by all apps
+5. 当你满意后，将 `sdkconfig` 文件从 launcher 复制到目标文件夹，以便所有应用都使用它
     - `cd ..`
     - `mv  -f launcher/sdkconfig components/retro-go/targets/my-target/sdkconfig`
 
-Note that any time you modify your target's `sdkconfig` file, you must run `./rg_tool.py clean` to ensure it will be applied.
+请注意，每当你修改目标的 `sdkconfig` 文件时，都必须运行 `./rg_tool.py clean` 以确保它会被应用。
 
 
 ### env.py
 
-Change the target board in `env.py` to match yours
+将 `env.py` 中的目标板子改为与你的一致
 
 
-After completing all these steps, you should be able to build your apps with `rg_tool`. See [BUILDING.md](BUILDING.md#flashing-an-image-for-the-first-time) for more info about this and flashing. **Make sure to use the steps for `.img`, NOT `.fw`**
+完成所有这些步骤后，你应该能够使用 `rg_tool` 构建你的应用。有关此操作和烧录的更多信息，请参阅 [BUILDING.md](BUILDING.md#flashing-an-image-for-the-first-time)。**确保使用 `.img` 的步骤，而不是 `.fw`**
 
 
-## Patching
+## 打补丁
 
-Not everything can be done through `config.h`. Sometimes you have to patch retro-go to add special code for your hardware. Any such modification will be harder to upstream, if that is your goal, but they are easy to perform.
+并非所有事情都能通过 `config.h` 完成。有时你必须为你的硬件修补 retro-go 以添加特殊代码。任何此类修改如果以合入上游为目标的话都会更加困难，但它们很容易执行。
 
-The build system automatically defines a constant for the target in use, eg `RG_TARGET_MY_TARGET` if your target is named `my-target` (the name is capitalized and `-` is replaced with `_`).
+构建系统会自动为正在使用的目标定义一个常量，例如，如果你的目标名为 `my-target`，则会定义 `RG_TARGET_MY_TARGET`（名称大写，并将 `-` 替换为 `_`）。
 
-Anywhere in retro-go you can add code wrapped in a #ifdef block that will apply only to your target:
+在 retro-go 的任何地方，你都可以添加包裹在 #ifdef 块中的代码，这些代码将仅适用于你的目标：
 
 ````c
 #ifdef RG_TARGET_MY_TARGET

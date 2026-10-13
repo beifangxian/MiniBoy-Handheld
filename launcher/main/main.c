@@ -189,6 +189,7 @@ static rg_gui_event_t prebuild_cache_cb(rg_gui_option_t *option, rg_gui_event_t 
     return RG_DIALOG_VOID;
 }
 
+//启动器主循环核心函数
 static void retro_loop(void)
 {
     tab_t *tab = NULL;
@@ -200,9 +201,9 @@ static void retro_loop(void)
     int browse_last = -1;
     bool redraw_pending = true;
 
-    gui_init(app->isColdBoot);
-    applications_init();
-    bookmarks_init();
+    gui_init(app->isColdBoot);//初始化启动器的UI结构
+    applications_init();//扫描SD卡里面的ROM，注册成各个tab
+    bookmarks_init();//读取收藏/最近记录
     // browser_init();
 
 #ifdef RG_ENABLE_NETWORKING
@@ -230,7 +231,7 @@ static void retro_loop(void)
         prev_joystick = gui.joystick;
         joystick = 0;
 
-        if ((gui.joystick = rg_input_read_gamepad()))
+        if ((gui.joystick = rg_input_read_gamepad()))//摁键扫描
         {
             if (prev_joystick != gui.joystick)
             {

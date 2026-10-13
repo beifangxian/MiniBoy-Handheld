@@ -25,6 +25,7 @@ static bool crc_cache_dirty = true;
 static retro_app_t *apps[24];
 static int apps_count = 0;
 
+//扫描目录
 static int scan_folder_cb(const rg_scandir_t *entry, void *arg)
 {
     retro_app_t *app = (retro_app_t *)arg;
@@ -130,20 +131,21 @@ static const char *get_file_path(retro_file_t *file)
     return buffer;
 }
 
+/*准备传递的信息*/
 static void application_start(retro_file_t *file, int load_state)
 {
     RG_ASSERT_ARG(file);
-    char *part = strdup(file->app->partition);
-    char *name = strdup(file->app->short_name);
-    char *path = strdup(get_file_path(file));
-    int flags = (gui.startup_mode ? RG_BOOT_ONCE : 0);
+    char *part = strdup(file->app->partition);                                  //目标分区
+    char *name = strdup(file->app->short_name);                                 //系统短名
+    char *path = strdup(get_file_path(file));                                   //ROM路径
+    int flags = (gui.startup_mode ? RG_BOOT_ONCE : 0);                          //启动选项
     if (load_state != -1)
     {
         flags |= RG_BOOT_RESUME;
         flags |= (load_state << 4) & RG_BOOT_SLOT_MASK;
     }
-    bookmark_add(BOOK_TYPE_RECENT, file); // This could relocate *file, but we no longer need it
-    rg_system_switch_app(part, name, path, flags);
+    bookmark_add(BOOK_TYPE_RECENT, file);                                       // This could relocate *file, but we no longer need it
+    rg_system_switch_app(part, name, path, flags);                              //选择app程序切换成功后调用重启流程。
 }
 
 static uint32_t crc_read_file(retro_file_t *file, bool interactive)
