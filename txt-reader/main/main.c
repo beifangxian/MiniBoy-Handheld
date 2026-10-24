@@ -759,26 +759,36 @@ void app_main(void)
             if (change_font_size(-1))
                 redraw = true;
         }
-        // Up / A: previous page; Down / B: next page
-        else if (pressed & (RG_KEY_UP | RG_KEY_A))
-        {
-            go_prev_page();
-            redraw = true;
-        }
-        else if (pressed & (RG_KEY_DOWN | RG_KEY_B))
-        {
-            go_next_page();
-            redraw = true;
-        }
-        // Left / Right: jump ±5% through the book
-        else if (pressed & RG_KEY_LEFT)
+        // Up / Down: jump 5%; A / B: previous / next page
+        else if (pressed & RG_KEY_UP)
         {
             jump_by_percent(-5);
             redraw = true;
         }
-        else if (pressed & RG_KEY_RIGHT)
+        else if (pressed & RG_KEY_DOWN)
         {
             jump_by_percent(+5);
+            redraw = true;
+        }
+        else if (pressed & RG_KEY_A)
+        {
+            go_next_page();
+            redraw = true;
+        }
+        else if (pressed & RG_KEY_B)
+        {
+            go_prev_page();
+            redraw = true;
+        }
+        // Left / Right: next / previous chapter (about 5% of the book)
+        else if (pressed & RG_KEY_LEFT)
+        {
+            jump_by_percent(+5);
+            redraw = true;
+        }
+        else if (pressed & RG_KEY_RIGHT)
+        {
+            jump_by_percent(-5);
             redraw = true;
         }
 
