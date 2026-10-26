@@ -4,13 +4,13 @@
 #include <driver/gpio.h>
 #include <driver/ledc.h>
 
-static spi_device_handle_t spi_dev;
-static QueueHandle_t spi_transactions;
-static QueueHandle_t spi_buffers;
+static spi_device_handle_t spi_dev;//spi句柄声明
+static QueueHandle_t spi_transactions;// 事务队列
+static QueueHandle_t spi_buffers;// 缓冲区队列
 
-#define SPI_TRANSACTION_COUNT (10)
-#define SPI_BUFFER_COUNT      (5)
-#define SPI_BUFFER_LENGTH     (LCD_BUFFER_LENGTH * 2)
+#define SPI_TRANSACTION_COUNT (10)//事务队列的深度
+#define SPI_BUFFER_COUNT      (5)//缓冲区队列的深度
+#define SPI_BUFFER_LENGTH     (LCD_BUFFER_LENGTH * 2)//单个缓冲区的字节长度
 
 #define ILI9341_CMD(cmd, data...)                    \
     {                                                \

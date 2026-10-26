@@ -175,8 +175,10 @@ static bool driver_submit(const rg_audio_frame_t *frames, size_t count)
         // Queue
         buffer[pos].left = left;
         buffer[pos].right = right;
+        // 先计入刚写入的帧；旧逻辑在 || 右侧递增，最后一帧触发短路，导致写入长度少一帧。
+        pos++;
 
-        if (i == count - 1 || ++pos == RG_COUNT(buffer))
+        if (i == count - 1 || pos == RG_COUNT(buffer))
         {
             size_t written;
             if (i2s_write(I2S_NUM_0, (void *)buffer, pos * 4, &written, 1000) != ESP_OK)

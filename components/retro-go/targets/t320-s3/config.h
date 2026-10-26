@@ -107,8 +107,11 @@
 #define RG_GPIO_SND_I2S_WS          42
 #define RG_GPIO_SND_I2S_DATA        40
 
-// MIC (WS=1, SCK=2, DIN=21) — not used by Retro-Go
-//麦克风（WS=1, SCK=2, DIN=21）—— Retro-Go 不使用
+// ICS-43434 microphone (LR=GND selects left channel)
+// ICS-43434 麦克风（LR 接地，选择左声道）
+#define RG_GPIO_MIC_I2S_WS           GPIO_NUM_1
+#define RG_GPIO_MIC_I2S_BCK          GPIO_NUM_2
+#define RG_GPIO_MIC_I2S_DATA         GPIO_NUM_21
 
 // Simplified Chinese UI + Fusion Pixel font (SD card UTF-8 filenames need sdkconfig FATFS UTF-8)
 //简体中文 UI + 融合像素字体（SD 卡 UTF-8 文件名需要在 sdkconfig 里启用 FATFS UTF-8）

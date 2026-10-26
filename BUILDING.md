@@ -62,7 +62,7 @@ python rg_tool.py --target=t320-s3 release
 
 要使用 `rg_tool.py` 烧录 `.img` 文件，请运行：
 ```bat
-python rg_tool.py --target=t320-s3 --port=COM3 install
+python rg_tool.py --target=t320-s3 --port=COM23 install
 ```
 
 要使用 `esptool.py` 烧录 `.img` 文件，请运行：

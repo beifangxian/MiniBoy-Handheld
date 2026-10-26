@@ -36,15 +36,16 @@ typedef struct
     int right, bottom;
 } rg_margins_t;
 
+//用于描述绘图表面（Surface） 的结构体
 typedef struct
 {
     int width, height;
-    int stride, offset; // , pixlen
-    int format;
-    uint16_t *palette;
-    void *data;
-    bool free_data;
-    bool free_palette;
+    int stride/*行跨距，即每行像素在内存中占用的字节数。*/, offset; // , pixlen
+    int format;//像素格式标识（枚举值），如 RGB565、ARGB8888、索引色等。
+    uint16_t *palette;//调色板指针。仅对索引色格式有效，指向颜色查找表；真彩色格式时为 NULL。
+    void *data;//指向像素数据缓冲区的指针。
+    bool free_data;//所有权标志。为 true 时，销毁该 surface 需要 free(data)；为 false 时说明 data 是外部借用或静态内存，不能释放。
+    bool free_palette;//同上，针对 palette 的所有权标志。
 } rg_surface_t;
 
 // rg_image_t always contains a RG_PIXEL_565_LE surface

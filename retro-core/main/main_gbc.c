@@ -8,6 +8,7 @@ static bool slowFrame = false;
 
 static int video_time;
 static int audio_time;
+static unsigned int audio_debug_count;
 
 static const char *sramFile;
 static int autoSaveSRAM = 0;
@@ -228,6 +229,19 @@ static void video_callback(void *buffer)
 static void audio_callback(void *buffer, size_t length)
 {
     int64_t startTime = rg_system_timer();
+    if ((audio_debug_count++ % 120) == 0)
+    {
+        const int16_t *samples = buffer;
+        int peak = 0;
+        for (size_t i = 0; i < length; ++i)
+        {
+            int value = samples[i];
+            int magnitude = value < 0 ? -value : value;
+            if (magnitude > peak)
+                peak = magnitude;
+        }
+        RG_LOGI("GB audio callback: samples=%u peak=%d", (unsigned)length, peak);
+    }
     rg_audio_submit(buffer, length >> 1);
     audio_time += rg_system_timer() - startTime;
 }

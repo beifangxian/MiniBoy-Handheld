@@ -15,6 +15,7 @@
 #include "gui.h"
 #include "webui.h"
 #include "updater.h"
+#include <rg_ai.h>
 
 static rg_app_t *app;
 
@@ -200,6 +201,8 @@ static void retro_loop(void)
     int change_tab = 0;
     int browse_last = -1;
     bool redraw_pending = true;
+    uint32_t pending_ab_key = 0;
+    int64_t pending_ab_time = 0;
 
     gui_init(app->isColdBoot);//初始化启动器的UI结构
     applications_init();//扫描SD卡里面的ROM，注册成各个tab
@@ -245,6 +248,49 @@ static void retro_loop(void)
                 repeats++;
                 next_repeat = rg_system_timer() + 400000 / (repeats + 1);
             }
+        }
+
+        if ((gui.joystick & (RG_KEY_A | RG_KEY_B)) == (RG_KEY_A | RG_KEY_B) &&
+            (prev_joystick & (RG_KEY_A | RG_KEY_B)) != (RG_KEY_A | RG_KEY_B))
+        {
+            char reply[1536];
+            char error[192];
+            bool ok = rg_ai_voice_chat(NULL, reply, sizeof(reply), error, sizeof(error));
+            if (ok)
+                rg_ai_show_reply(_("AI reply"), reply);
+            else
+                rg_gui_alert(_("AI error"), error);
+            while ((rg_input_read_gamepad() & (RG_KEY_A | RG_KEY_B)) == (RG_KEY_A | RG_KEY_B))
+                rg_task_delay(20);
+            gui.joystick = 0;
+            prev_joystick = 0;
+            joystick = 0;
+            pending_ab_key = 0;
+            redraw_pending = true;
+        }
+        else if (joystick == RG_KEY_A || joystick == RG_KEY_B)
+        {
+            if (!pending_ab_key)
+            {
+                pending_ab_key = joystick;
+                pending_ab_time = rg_system_timer();
+                joystick = 0;
+            }
+            else if (pending_ab_key != (uint32_t)joystick)
+            {
+                uint32_t next_ab_key = joystick;
+                joystick = pending_ab_key;
+                pending_ab_key = next_ab_key;
+                pending_ab_time = rg_system_timer();
+            }
+            else
+                joystick = 0;
+        }
+        if (pending_ab_key && rg_system_timer() - pending_ab_time >= 100000)
+        {
+            if (!joystick)
+                joystick = pending_ab_key;
+            pending_ab_key = 0;
         }
 
         if (joystick & (RG_KEY_MENU|RG_KEY_OPTION))

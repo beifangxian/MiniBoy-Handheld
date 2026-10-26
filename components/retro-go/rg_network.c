@@ -293,7 +293,8 @@ bool rg_network_init(void)
 
     // Setup SNTP client but don't query it yet
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    esp_sntp_setservername(0, "pool.ntp.org");
+    esp_sntp_setservername(0, "ntp.aliyun.com");
+    esp_sntp_setservername(1, "pool.ntp.org");
     // esp_sntp_init();
 
     // Load the user's chosen config profile, if any

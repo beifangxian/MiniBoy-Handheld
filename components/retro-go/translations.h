@@ -1348,4 +1348,32 @@ static const char *translations[][RG_LANG_MAX] =
         [RG_LANG_DE] = "Zum Ende",
         [RG_LANG_CHS] = "跳到结尾",
     },
+    {
+        [RG_LANG_EN] = "AI reply",
+        [RG_LANG_CHS] = "AI回复",
+    },
+    {
+        [RG_LANG_EN] = "AI error",
+        [RG_LANG_CHS] = "AI错误",
+    },
+    {
+        [RG_LANG_EN] = "Recording... release A or B to send",
+        [RG_LANG_CHS] = "正在录音...松开A或B键发送",
+    },
+    {
+        [RG_LANG_EN] = "Transcribing audio...",
+        [RG_LANG_CHS] = "正在识别语音...",
+    },
+    {
+        [RG_LANG_EN] = "Waiting for AI reply...",
+        [RG_LANG_CHS] = "等待AI回复...",
+    },
+    {
+        [RG_LANG_EN] = "AI reply is empty.",
+        [RG_LANG_CHS] = "AI回复为空。",
+    },
+    {
+        [RG_LANG_EN] = "Not enough memory to display the reply.",
+        [RG_LANG_CHS] = "内存不足，无法显示回复。",
+    },
 };

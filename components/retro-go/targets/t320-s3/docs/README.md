@@ -27,7 +27,7 @@ Firmware image: **`retro-go_chaeng_t320-s3.img`**
 | TFT BLK | 39 |
 | TFT MOSI / CLK / DC / RST / CS | 12 / 48 / 47 / 3 / 14 |
 | Status LED | 38 (WS2812 / XL-2020RGBC-2812B) |
-| MIC WS / SCK / DIN | 1 / 2 / 21 (unused by Retro-Go) |
+| MIC WS / SCK / SD | 1 / 2 / 21 (ICS-43434; LR grounded for left channel) |
 
 ## Build
 
@@ -58,8 +58,11 @@ Bookmarks: `retro-go/saves/txt/*.bmk` (up to 8; via Options → Emulator options
 |-----|--------|
 | Menu | Game menu (unchanged) |
 | Option / Settings | Options menu (unchanged) |
-| Up / A | Previous page |
-| Down / B | Next page |
+| Hold A + B | Record voice; release either button to send to AI |
+| A | Next page |
+| B | Previous page |
+| Up / Right | Jump back about 5% |
+| Down / Left | Jump forward about 5% |
 | Select | Larger font (native 16→20→24, no stretch) |
 | Start | Smaller font |
 

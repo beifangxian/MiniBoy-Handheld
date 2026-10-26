@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LCD_BUFFER_LENGTH (RG_SCREEN_WIDTH * 4) // In pixels
+#define LCD_BUFFER_LENGTH (RG_SCREEN_WIDTH * 4) // In pixels像素个数
 
 // static rg_display_driver_t driver;
 static rg_task_t *display_task_queue;
@@ -341,6 +341,20 @@ static bool load_border_file(const char *filename)
     return false;
 }
 
+/*
+    显示任务（display task） 的主循环，
+    运行在一个独立的 FreeRTOS 任务里，
+    负责响应消息、更新视口、清屏和提交画面。
+    它把显示刷新从主逻辑中剥离出来，避免阻塞其他操作。
+
+    ├── IRAM_ATTR            → 函数放 IRAM，保证时序敏感代码随时可执行
+    ├── while (peek msg)     → 循环处理消息队列
+    │   ├── STOP             → 退出任务
+    │   ├── display.changed  → 重算视口 + 清屏
+    │   ├── write_update()   → 把数据推到屏幕
+    │   ├── receive()        → 确认消息已消费
+    │   └── lcd_sync()       → 等待 DMA 刷完
+*/
 IRAM_ATTR
 static void display_task(void *arg)
 {
@@ -492,6 +506,7 @@ void rg_display_submit(const rg_surface_t *update, uint32_t flags)
     const int64_t time_start = rg_system_timer();
 
     // Those things should probably be asserted, but this is a new system let's be forgiving...
+    //这些东西按理说应该加断言（assert）来检查，但这是一个新系统，我们先宽容一点，不强制检查了。
     if (!update || !update->data)
         return;
 

@@ -864,6 +864,10 @@ void rg_system_tick(int busyTime)
     // WDT_RELOAD(WDT_TIMEOUT);
 }
 
+/*
+ESP_PLATFORM	ESP-IDF 构建系统（CMake + toolchain）	编译 ESP-IDF 固件时，自动加到编译命令行
+RG_TARGET_SDL2	项目的 SDL 构建脚本（Makefile / CMake）	编译 SDL 版本时，由项目自己的构建配置定义
+*/
 IRAM_ATTR int64_t rg_system_timer(void)
 {
 #if defined(ESP_PLATFORM)

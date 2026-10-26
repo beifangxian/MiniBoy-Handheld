@@ -4,6 +4,7 @@
 #include <rg_storage.h>
 #include <rg_utils.h>
 #include <rg_display.h>
+#include <rg_ai.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -685,6 +686,8 @@ void app_main(void)
     };
 
     uint32_t prev_keys = 0;
+    uint32_t pending_ab_key = 0;
+    int64_t pending_ab_time = 0;
     rg_stat_t st;
 
     app = rg_system_init(32000, &handlers, NULL);
@@ -713,6 +716,7 @@ void app_main(void)
     }
 
     book_size = st.size;
+    rg_network_init();
     detect_book_encoding();
     page_offset = 0;
     history_len = 0;
@@ -732,8 +736,47 @@ void app_main(void)
         prev_keys = keys;
         bool redraw = false;
 
+        bool ai_handled = false;
+        if ((keys & (RG_KEY_A | RG_KEY_B)) == (RG_KEY_A | RG_KEY_B) &&
+            (pressed & (RG_KEY_A | RG_KEY_B)))
+        {
+            char reply[1536];
+            char error[192];
+            bool ok = rg_ai_voice_chat(page_text, reply, sizeof(reply), error, sizeof(error));
+            if (ok)
+                rg_ai_show_reply(_("AI reply"), reply);
+            else
+                rg_gui_alert(_("AI error"), error);
+            redraw = true;
+            ai_handled = true;
+            pending_ab_key = 0;
+        }
+        else
+        {
+            uint32_t new_ab_key = pressed & (RG_KEY_A | RG_KEY_B);
+            if (new_ab_key == RG_KEY_A || new_ab_key == RG_KEY_B)
+            {
+                if (pending_ab_key && pending_ab_key != new_ab_key)
+                {
+                    pressed |= pending_ab_key;
+                    pending_ab_time = rg_system_timer();
+                }
+                else if (!pending_ab_key)
+                {
+                    pending_ab_time = rg_system_timer();
+                }
+                pending_ab_key = new_ab_key;
+                pressed &= ~new_ab_key;
+            }
+            if (pending_ab_key && rg_system_timer() - pending_ab_time >= 100000)
+            {
+                pressed |= pending_ab_key;
+                pending_ab_key = 0;
+            }
+        }
+
         // Same as emulators: Menu = game menu, Option = options menu
-        if (pressed & RG_KEY_MENU)
+        if (!ai_handled && (pressed & RG_KEY_MENU))
         {
             save_progress();
             rg_gui_game_menu();
@@ -741,7 +784,7 @@ void app_main(void)
             refresh_slot_cache();
             redraw = true;
         }
-        else if (pressed & RG_KEY_OPTION)
+        else if (!ai_handled && (pressed & RG_KEY_OPTION))
         {
             rg_gui_options_menu();
             apply_reader_font();
@@ -749,44 +792,44 @@ void app_main(void)
             redraw = true;
         }
         // Select: larger font; Start: smaller font
-        else if (pressed & RG_KEY_SELECT)
+        else if (!ai_handled && (pressed & RG_KEY_SELECT))
         {
             if (change_font_size(+1))
                 redraw = true;
         }
-        else if (pressed & RG_KEY_START)
+        else if (!ai_handled && (pressed & RG_KEY_START))
         {
             if (change_font_size(-1))
                 redraw = true;
         }
         // Up / Down: jump 5%; A / B: previous / next page
-        else if (pressed & RG_KEY_UP)
+        else if (!ai_handled && (pressed & RG_KEY_UP))
         {
             jump_by_percent(-5);
             redraw = true;
         }
-        else if (pressed & RG_KEY_DOWN)
+        else if (!ai_handled && (pressed & RG_KEY_DOWN))
         {
             jump_by_percent(+5);
             redraw = true;
         }
-        else if (pressed & RG_KEY_A)
+        else if (!ai_handled && (pressed & RG_KEY_A))
         {
             go_next_page();
             redraw = true;
         }
-        else if (pressed & RG_KEY_B)
+        else if (!ai_handled && (pressed & RG_KEY_B))
         {
             go_prev_page();
             redraw = true;
         }
         // Left / Right: next / previous chapter (about 5% of the book)
-        else if (pressed & RG_KEY_LEFT)
+        else if (!ai_handled && (pressed & RG_KEY_LEFT))
         {
             jump_by_percent(+5);
             redraw = true;
         }
-        else if (pressed & RG_KEY_RIGHT)
+        else if (!ai_handled && (pressed & RG_KEY_RIGHT))
         {
             jump_by_percent(-5);
             redraw = true;

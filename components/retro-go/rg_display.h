@@ -63,38 +63,40 @@ typedef struct
 
 typedef struct
 {
-    const char *name;                                               // Driver name
-    bool (*init)(void);                                             // Init the display
-    bool (*deinit)(void);                                           // Deinit the display
-    bool (*sync)(void);                                             // Pause until all data has been flushed
-    bool (*set_backlight)(float percent);                           // Set backlight 0.0 - 1.0
-    bool (*set_window)(int left, int top, int width, int height);   // Set draw window
-    uint16_t *(*get_buffer)(size_t length);                         // Get a DMA-capable buffer to write pixels to and send via send_buffer
-    bool (*send_buffer)(uint16_t *buffer, size_t length);           // Send data to display (buffer MUST be acquired via get_buffer)
+    const char *name;                                               // 驱动名字
+    bool (*init)(void);                                             // 初始化显示屏
+    bool (*deinit)(void);                                           // 反初始化
+    bool (*sync)(void);                                             // 同步/等待 暂停直到所有已提交的数据真正刷完。用于防止在 DMA 还在传输时修改缓冲区。
+    bool (*set_backlight)(float percent);                           // 设置背光亮度，参数是 0.0 ~ 1.0 的浮点百分比。
+    bool (*set_window)(int left, int top, int width, int height);   // 设置绘制窗口（即 ILI9341 的 Column/Page Address Set），限定后续像素写入的区域。
+    uint16_t *(*get_buffer)(size_t length);                         // 获取一块支持 DMA 的像素缓冲区。长度单位是像素数（uint16_t 个数）。
+    bool (*send_buffer)(uint16_t *buffer, size_t length);           // 把缓冲区数据发送到屏幕。必须用 get_buffer 拿到的缓冲区。
     // bool (*write)(int left, int top, int width, int height, int pitch, const uint16_t data);
 } rg_display_driver_t;
 
+//图形库中用于描述显示输出状态的结构体
 typedef struct
 {
     struct
     {
-        int real_width, real_height; // Real physical resolution
-        int width, height; // Visible resolution (minus margins)
+        int real_width, real_height; //物理分辨率。屏幕实际有多少像素，比如 320×240。
+        int width, height; // 可见分辨率。扣掉边距后真正能用来显示图像的区域大小。
+        //四边边距 {left, top, right, bottom}。用于适配某些屏幕边缘不可用、或有边框遮挡的情况。
         struct {int left, top, right, bottom;} margins;
-        int format;
+        // int format;/屏幕像素格式，如 RGB565、RGB666 等。
     } screen;
     struct
     {
-        int top, left;
-        int width, height;
-        float step_x, step_y;
-        bool filter_x, filter_y;
-    } viewport;
+        int top, left;//视口在屏幕上的起始坐标（相对可见区域）。
+        int width, height;//视口的目标尺寸，即图像最终显示多大。
+        float step_x, step_y;//采样步长（浮点）。用于缩放：每输出一个像素，在源图上前进多少。step_x > 1 是缩小，< 1 是放大。
+        bool filter_x, filter_y;//是否在该方向启用滤波（如双线性插值）。关闭时用最近邻，速度快但可能有锯齿。
+    } viewport;//“源图像要画到屏幕的哪个位置、怎么缩放”。
     struct
     {
-        int width, height;
+        int width, height;//待显示的源图像原始尺寸。
     } source;
-    bool changed;
+    bool changed;//脏标记：避免每帧都重算重画，只有状态真正改变时才触发更新，节省 CPU。
 } rg_display_t;
 
 #include "rg_surface.h"
